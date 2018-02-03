@@ -2,7 +2,7 @@ from bs4 import BeautifulSoup
 from datetime import datetime
 import os
 
-# returns array of all messages in file in format (time, user, text)
+# returns array of all messages in the conversation file as dictionaries with time, user, and text
 def scrapePage(file):
 	soup_page = BeautifulSoup(open(file), 'html.parser')
 	thread = soup_page.find('div', attrs={'class' : 'thread'})
@@ -11,22 +11,25 @@ def scrapePage(file):
 	times = [strToTime(meta.find('span', attrs={'class' : 'meta'}, recursive=False).text) for meta in metas]
 	users = [meta.find('span', attrs={'class' : 'user'}, recursive=False).text for meta in metas]
 	texts = [text.text for text in thread.find_all('p', recursive=False)]
-	return zip(times, users, texts)
+	
+	return [{'time': x, 'user': y, 'text': z} for x,y,z in list(zip(times, users, texts))[::-1]]
 
 # returns datetime object of str
 def strToTime(str):
 	return datetime.strptime(str, '%A, %B %d, %Y at %I:%M%p %Z')
 
-# returns array of all messages in folder in format name, [(time, user, text)]
+# returns array of all conversations
 def scrapeAll(folder):
 	name = getName(os.path.join(folder, 'index.htm'))
 
-	msgs = []
+	convos = []
 	for file in os.listdir(folder):
-	    if file.endswith('.html'):
-	        msgs.extend(scrapePage(os.path.join(folder, file)))
-	
-	return name, msgs
+		if file.endswith('.html'):
+			scraped = scrapePage(os.path.join(folder, file))
+			if (len(scraped) > 0):
+				convos.append(scraped)
+
+	return name, convos
 
 # returns the name of the target user
 def getName(file):
